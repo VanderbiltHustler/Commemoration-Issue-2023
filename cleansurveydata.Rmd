@@ -1,0 +1,831 @@
+---
+title: "Survey Data"
+author: "Katherine Oung, Vanderbilt University"
+date: "2023-05-13"
+output: html_document
+---
+
+```{r load in survey data}
+survey <- read.csv("rawsurveydata.csv")
+library(tidyverse)
+library(weights)
+
+
+```
+
+```{r recode base dataset}
+survey <- survey %>%
+  mutate(X4 = case_when(
+    X4 == "Male (Cisgender)" ~ "1",
+    X4 == "Female (Cisgender)" ~ "2",
+    X4 == "Nonbinary or gender nonconforming" ~ "3"
+  ))
+
+
+
+states = c("Alabama", "Alaska", "American Samoa", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia", "Guam", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Minor Outlying Islands", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Northern Mariana Islands", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Puerto Rico", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "U.S. Territories", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming")
+
+survey <- survey %>%
+  mutate(X1_2 = ifelse(X1 %in% states, "1", "2"))
+
+survey <- survey %>%
+  mutate(X6 = case_when(
+    X6 == "Dual enrollment "  ~ "Home School/Other",
+    X6 == "Home School"  ~ "Home School/Other",
+    TRUE ~ X6
+  ))
+
+survey <- survey %>%
+  na_if("X")
+
+survey <- survey %>%
+  na_if("N/A") %>%
+  na_if("")
+
+survey <- survey %>%
+  mutate(X18_2 = case_when(
+    X18 == "No, I never participated in Greek Life" ~ "Not currently in Greek Life",
+    X18 == "No, I rushed but was not offered membership" ~ "Not currently in Greek Life",
+    X18 == "Yes, but I dropped/was expelled from my Greek organization" ~ "Not currently in Greek Life",
+    X18 == "Yes, I am a member of a Greek organization" ~ "Currently in Greek Life"
+  ))
+```
+
+Calculate weights using package
+
+```{r}
+wpct(survey$X4)
+
+wpct(survey$X1_2)
+
+#female 0.509001637, male 0.490998363
+#subtract 0.017094015 for each for nonbinary population
+
+gender <- c(0.473904348,0.491907622, 0.03418803)
+international <- c(0.894708129,0.105291871)
+
+# definitions of target list
+targets <- list(gender,international)
+# important: to use the same variable names of the dataset
+names(targets) <- c("X4", "X1_2")
+# id variable
+survey$caseid <- 1:length(survey$X4)
+
+library(anesrake)
+anesrakefinder(targets, survey, choosemethod = "total")
+
+```
+
+```{r}
+#truncate weights greater than 3
+outsave <- anesrake(targets, survey, caseid = survey$caseid,
+  verbose= FALSE, cap = 3, choosemethod = "total",
+  type = "pctlim", pctlim = .05 , nlim = 5,
+  iterate = TRUE , force1 = TRUE)
+
+summary(outsave)
+```
+
+```{r}
+survey$weightvec  <- unlist(outsave[1])
+n  <- length(survey$X4)
+
+survey %>%
+  arrange(weightvec)
+```
+
+
+
+```{r}
+unweighted <-  wpct(survey$X4)
+weighted_gender  <-  wpct(survey$X4, survey$weightvec)
+weighted_domestic  <-  wpct(survey$X1_2, survey$weightvec)
+
+```
+
+Geography plot
+```{r}
+#not weighted by international students
+
+survey <- survey %>%
+  mutate(X1_2 = ifelse(X1 %in% states, X1, NA))
+
+weighted_states  <-  wpct(survey$X1_2, survey$weightvec)
+write.csv(weighted_states, "Graph 2.csv", row.names = TRUE)
+```
+
+Race/Ethnicity Plot
+```{r}
+weighted_race  <-  wpct(survey$X2, survey$weightvec)
+unweighted_race  <-  wpct(survey$X2)
+
+write.csv(weighted_race, "Graph 3_1.csv", row.names = TRUE)
+
+```
+
+Sexuality
+```{r}
+weighted_sexuality  <-  wpct(survey$X3, survey$weightvec)
+unweighted_sexuality  <-  wpct(survey$X3)
+
+write.csv(weighted_sexuality, "Graph 3_3.csv", row.names = TRUE)
+
+```
+
+Household income
+```{r}
+
+survey <- survey %>%
+  mutate(X7 = case_when(
+    X7 == "$50,000 - $74,999" ~ "$50,000 - $99,999",
+    X7 == "$75,000 - $99,999" ~ "$50,000 - $99,999",
+    X7 == "$100,000 - $149,999" ~ "$100,000 - $199,999",
+    X7 == "$150,000 - $199,999" ~ "$100,000 - $199,999",
+    X7 == "$200,000 - $299,999" ~ "$200,000 - $499,999",
+    X7 == "$300,000 - $499,999" ~ "$200,000 - $499,999",    
+    X7 == "$500,000 - $749,999" ~ "$500,000 - $999,999",    
+    X7 == "$750,000 - $999,999" ~ "$500,000 - $999,999",  
+    TRUE ~ X7
+  ))
+  
+weighted_income  <-  wpct(survey$X7, survey$weightvec)
+unweighted_income  <-  wpct(survey$X7)
+
+write.csv(weighted_income, "Graph 4.csv", row.names = TRUE)
+
+```
+
+Type of school by household income
+```{r}
+school_by_income <- survey %>% 
+  filter(!is.na(X7)) %>%
+  group_by(X7, X6) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X6) %>%
+  arrange(X6)
+
+write.csv(school_by_income, "Graph 5.csv", row.names = TRUE)
+
+```
+
+First gen by household income
+```{r}
+firstgen_by_income <- survey %>% 
+  filter(!is.na(X7)) %>%
+  group_by(X7, X5) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X5) %>%
+  arrange(X5)
+
+write.csv(firstgen_by_income, "Graph 6.csv", row.names = TRUE)
+
+
+```
+
+
+Admissions cycle
+```{r}
+weighted_admissions  <-  wpct(survey$X10, survey$weightvec, na.rm=TRUE)
+unweighted_admissions  <-  wpct(survey$X10)
+write.csv(weighted_admissions, "Graph 7.csv", row.names = TRUE)
+```
+Student Loans
+```{r}
+weighted_stuloans  <-  wpct(survey$X8, survey$weightvec, na.rm=TRUE)
+write.csv(weighted_stuloans, "Graph 8.csv", row.names = TRUE)
+
+```
+
+Merit Scholar
+```{r}
+weighted_merit  <-  wpct(survey$X11, survey$weightvec, na.rm=TRUE)
+unweighted_merit  <-  wpct(survey$X11)
+write.csv(weighted_merit, "Graph 9-1.csv", row.names = TRUE)
+```
+
+Athlete
+```{r}
+weighted_athlete  <-  wpct(survey$X9, survey$weightvec, na.rm=TRUE)
+unweighted_athlete  <-  wpct(survey$X9)
+write.csv(weighted_athlete, "Graph 9-2.csv", row.names = TRUE)
+```
+College applied to
+```{r}
+weighted_collegeapplied  <-  wpct(survey$X12, survey$weightvec, na.rm=TRUE)
+unweighted_collegeapplied  <-  wpct(survey$X12)
+write.csv(weighted_collegeapplied, "Graph 14-1.csv", row.names = TRUE)
+```
+College graduated from
+```{r}
+weighted_collegegrad <-  wpct(survey$X13, survey$weightvec, na.rm=TRUE)
+unweighted_collegegrad  <-  wpct(survey$X13)
+write.csv(weighted_collegegrad, "Graph 14-2.csv", row.names = TRUE)
+```
+College switch
+```{r}
+survey <- survey %>%
+  mutate(switch = ifelse(X12 == X13, "Changed Colleges", "Stayed in the Same College"))
+
+weighted_switch <-  wpct(survey$switch, survey$weightvec, na.rm=TRUE)
+unweighted_switch  <-  wpct(survey$switch)
+```
+
+Switched majors
+```{r}
+weighted_switchmajor <-  wpct(survey$X16, survey$weightvec, na.rm=TRUE)
+
+
+```
+
+
+Majors
+```{r}
+weighted_majors <-  wpct(survey$X14, survey$weightvec, na.rm=TRUE)
+unweighted_majors  <-  wpct(survey$X14)
+write.csv(weighted_majors, "Graph 15-1.csv", row.names = TRUE)
+```
+
+
+
+Minors
+```{r}
+weighted_minors <-  wpct(survey$X15, survey$weightvec, na.rm=TRUE)
+unweighted_minors  <-  wpct(survey$X15)
+write.csv(weighted_minors, "Graph 15-2.csv", row.names = TRUE)
+```
+
+
+```{r}
+weighted_preprof <-  wpct(survey$X17, survey$weightvec, na.rm=TRUE)
+unweighted_preprof  <-  wpct(survey$X17)
+write.csv(weighted_preprof, "Graph 16.csv", row.names = TRUE)
+```
+
+Location after grad
+```{r}
+weighted_location <-  wpct(survey$X24, survey$weightvec, na.rm=TRUE)
+unweighted_location  <-  wpct(survey$X24)
+write.csv(weighted_location, "Graph 10.csv", row.names = TRUE)
+```
+
+Plans after grad
+```{r}
+weighted_plans <-  wpct(survey$X23, survey$weightvec, na.rm=TRUE)
+unweighted_plans  <-  wpct(survey$X23)
+write.csv(weighted_plans, "Graph 11.csv", row.names = TRUE)
+```
+
+Industry
+```{r}
+weighted_industry <-  wpct(survey$X25, survey$weightvec, na.rm=TRUE)
+unweighted_industry <-  wpct(survey$X25, na.rm=TRUE)
+write.csv(weighted_industry, "Graph 12-1.csv", row.names = TRUE)
+
+```
+Industry & income
+
+```{r}
+weighted_income <-  wpct(survey$X26, survey$weightvec, na.rm=TRUE)
+unweighted_income <-  wpct(survey$X26, na.rm=TRUE)
+```
+
+```{r}
+salary_by_industry <- survey %>% #first gen vs type of school seems inaccurate
+  filter(!is.na(X25) & !is.na(X26)) %>%
+  group_by(X25, X26) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X25) %>%
+  arrange(X25, X26)
+write.csv(salary_by_industry, "Graph 12-2.csv", row.names = TRUE)
+ 
+```
+
+```{r}
+salary_by_gender <- survey %>% #first gen vs type of school seems inaccurate
+  filter(!is.na(X26)) %>%
+  group_by(X4, X26) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X26) %>%
+  arrange(X26)
+
+write.csv(salary_by_gender, "Graph 13.csv", row.names = TRUE)
+
+```
+
+Campus satisfaction
+Disagree 1 Agree 7
+```{r}
+weighted_diningbefore <-  wpct(survey$X45, survey$weightvec, na.rm=TRUE)
+unweighted_diningbefore <-  wpct(survey$X45, na.rm=TRUE)
+write.csv(weighted_diningbefore, "Graph 18-1.csv", row.names = TRUE)
+
+```
+
+```{r}
+weighted_diningafter <-  wpct(survey$X46, survey$weightvec, na.rm=TRUE)
+unweighted_diningafter <-  wpct(survey$X46, na.rm=TRUE)
+write.csv(weighted_diningafter, "Graph 18-2.csv", row.names = TRUE)
+
+```
+
+Admin responsiveness
+```{r}
+weighted_admin <-  wpct(survey$X47, survey$weightvec, na.rm=TRUE)
+unweighted_admin <-  wpct(survey$X47, na.rm=TRUE)
+write.csv(weighted_admin, "Graph 16-1.csv", row.names = TRUE)
+```
+
+Responsiveness by race
+```{r}
+race_survey <- survey %>%
+  mutate(X2_2 = ifelse(X2 == "White/Caucasian", "White/Caucasian", "Non-white"))
+
+responsiveness_by_race <- race_survey %>% 
+  filter(!is.na(X49)) %>%
+  group_by(X2_2, X49) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X2_2) %>%
+  arrange(X49)
+```
+
+
+VSG responsiveness
+```{r}
+weighted_admin <-  wpct(survey$X48, survey$weightvec, na.rm=TRUE)
+unweighted_admin <-  wpct(survey$X48, na.rm=TRUE)
+write.csv(weighted_admin, "Graph 16-2.csv", row.names = TRUE)
+```
+
+Counseling
+```{r}
+weighted_counseling <-  wpct(survey$X49, survey$weightvec, na.rm=TRUE)
+unweighted_counseling <-  wpct(survey$X49, na.rm=TRUE)
+write.csv(weighted_counseling, "Graph 16-3.csv", row.names = TRUE)
+```
+
+Have you had sex
+```{r}
+weighted_sex <-  wpct(survey$X36, survey$weightvec, na.rm=TRUE)
+unweighted_sex <-  wpct(survey$X36, na.rm=TRUE)
+
+sex_by_gender <- survey %>% 
+  filter(!is.na(X36)) %>%
+  group_by(X4, X36) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X4) %>%
+  arrange(X36)
+write.csv(sex_by_gender, "Graph 21-1.csv", row.names = TRUE)
+
+```
+
+Have you had sex in a nonresidential building
+```{r}
+survey <- survey %>%
+  mutate(X37_2 = ifelse(X36 == "No", NA, X37))
+  
+weighted_sexres <-  wpct(survey$X37_2, survey$weightvec, na.rm=TRUE)
+unweighted_sexres <-  wpct(survey$X37_2, na.rm=TRUE)
+write.csv(weighted_sexres, "Graph 21-2.csv", row.names = TRUE)
+
+sexres_by_gender <- survey %>% 
+  filter(!is.na(X37_2)) %>%
+  group_by(X4, X37_2) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X37_2) %>%
+  arrange(X37_2)
+write.csv(sexres_by_gender, "Graph 21-2.csv", row.names = TRUE)
+
+```
+
+# of relationships
+```{r}
+relationships <-  wpct(survey$X38, survey$weightvec, na.rm=TRUE)
+write.csv(relationships, "Graph 21-3.csv", row.names = TRUE)
+
+```
+
+Fake IDS
+```{r}
+#yes/no
+survey <- survey %>%
+  mutate(X44_2 = ifelse(X44 == "N/A (I have never owned a fake ID)", "Never owned a fake ID", "Have owned one fake ID")) %>%
+  mutate(X44_2 = ifelse(grepl(";", X44), "Have owned more than one fake ID", X44_2))
+
+weighted_id <-  wpct(survey$X44_2, survey$weightvec, na.rm=TRUE)
+unweighted_id <-  wpct(survey$X44_2, na.rm=TRUE)
+write.csv(weighted_id, "Graph 22-1.csv", row.names = TRUE)
+
+```
+
+```{r}
+surveyid <- survey %>%
+  select(X44, weightvec)
+
+surveyid_split <- separate_rows(surveyid, X44, sep = ";") 
+
+surveyid_split <- surveyid_split %>%
+  filter(X44 != "N/A (I have never owned a fake ID)" & X44 != "N/A" & X44 != "")
+
+weighted_idmap <-  wpct(surveyid_split$X44, surveyid_split$weightvec, na.rm=TRUE)
+
+write.csv(weighted_idmap, "Graph 22-2.csv", row.names = TRUE)
+
+
+```
+
+Alcohol
+```{r}
+weighted_alc <-  wpct(survey$X39, survey$weightvec, na.rm=TRUE)
+unweighted_alc <-  wpct(survey$X39, na.rm=TRUE)
+write.csv(weighted_alc, "Graph 23-1.csv", row.names = TRUE)
+
+```
+Weed
+```{r}
+weighted_weed <-  wpct(survey$X40, survey$weightvec, na.rm=TRUE)
+unweighted_weed <-  wpct(survey$X40, na.rm=TRUE)
+write.csv(weighted_weed, "Graph 23-2.csv", row.names = TRUE)
+
+```
+Other Drugs
+```{r}
+
+weighted_drugs <-  wpct(survey$X41, survey$weightvec, na.rm=TRUE)
+unweighted_drugs <-  wpct(survey$X41, na.rm=TRUE)
+write.csv(weighted_drugs, "Graph 23-3.csv", row.names = TRUE)
+
+drugs_df <- read.csv("Graph 23-3.csv")
+colnames(drugs_df) <- c("Drug", "Proportion")
+drugs_split <- separate_rows(drugs_df, Drug, sep = ";") 
+drug_proportions <- aggregate(Proportion ~ Drug, data = drugs_split, FUN = sum)
+write.csv(drug_proportions, "Graph 23-4.csv", row.names = TRUE)
+
+
+```
+
+Greek life
+```{r}
+weighted_gl <-  wpct(survey$X18, survey$weightvec, na.rm=TRUE)
+unweighted_gl <-  wpct(survey$X18, na.rm=TRUE)
+write.csv(weighted_gl, "Graph 19-3.csv", row.names = TRUE)
+
+gl_by_gender <- survey %>% 
+  group_by(X4, X18) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X18) %>%
+  arrange(X4)
+write.csv(gl_by_gender, "Graph 19-1.csv", row.names = TRUE)
+
+
+gl_by_race <- survey %>% 
+  group_by(X2, X18) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X18) %>%
+  arrange(X2)
+write.csv(gl_by_race, "Graph 20.csv", row.names = TRUE)
+```
+
+```{r}
+
+alc_by_gl <- survey %>% 
+  group_by(X18_2, X39) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X18_2) %>%
+  arrange(X39)
+
+write.csv(alc_by_gl, "Graph 24-1.csv", row.names = TRUE)
+
+```
+
+```{r}
+
+weed_by_gl <- survey %>% 
+  filter(!is.na(X40)) %>%
+  group_by(X18_2, X40) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X18_2) %>%
+  arrange(X40)
+
+write.csv(weed_by_gl, "Graph 24-2.csv", row.names = TRUE)
+
+```
+
+
+```{r}
+drugs_by_gl <- survey %>% 
+  filter(!is.na(X41)) %>%
+  group_by(X18_2, X41) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X18_2) %>%
+  arrange(X41)
+
+write.csv(drugs_by_gl, "Graph 24-3.csv", row.names = TRUE)
+
+
+drugsgl_df <- read.csv("Graph 24-3.csv")
+colnames(drugsgl_df) <- c("Num", "Greek_Life", "Drug", "Weight", "Proportion")
+drugs_split <- separate_rows(drugsgl_df, Drug, sep = ";") 
+
+drugsgl_proportions <- drugs_split %>%
+  group_by(Drug, Greek_Life) %>%
+  summarise(Proportion = sum(Proportion), .groups = "drop")
+
+write.csv(drugsgl_proportions, "Graph 24-4.csv", row.names = TRUE)
+```
+Voting
+```{r}
+weighted_voting <-  wpct(survey$X35, survey$weightvec, na.rm=TRUE)
+unweighted_voting <-  wpct(survey$X35, na.rm=TRUE)
+write.csv(weighted_voting, "Graph 26.csv", row.names = TRUE)
+
+```
+Ideology
+```{r}
+weighted_currentpolitics <-  wpct(survey$X27, survey$weightvec, na.rm=TRUE)
+unweighted_currentpolitics <-  wpct(survey$X27, na.rm=TRUE)
+write.csv(weighted_currentpolitics, "Graph 25-1.csv", row.names = TRUE)
+
+```
+
+```{r}
+weighted_beforepolitics <-  wpct(survey$X28, survey$weightvec, na.rm=TRUE)
+unweighted_beforepolitics <-  wpct(survey$X28, na.rm=TRUE)
+write.csv(weighted_beforepolitics, "Graph 25-2.csv", row.names = TRUE)
+
+```
+
+Political Opinions
+
+Divest
+```{r}
+weighted_divest <-  wpct(survey$X29, survey$weightvec, na.rm=TRUE)
+unweighted_divest <-  wpct(survey$X29, na.rm=TRUE)
+write.csv(weighted_divest, "Graph 17-1.csv", row.names = TRUE)
+```
+
+AGL
+```{r}
+weighted_AGL <-  wpct(survey$X30, survey$weightvec, na.rm=TRUE)
+unweighted_AGL <-  wpct(survey$X30, na.rm=TRUE)
+write.csv(weighted_AGL, "Graph 17-2.csv", row.names = TRUE)
+
+```
+
+AGL by Greek Life Participation
+```{r}
+AGL_by_gl <- surveydrugs_split %>% 
+  group_by(X30,X18_2) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X18_2) %>%
+  arrange(X30)
+
+
+AGL_by_race <- survey %>% 
+  group_by(X2, X30) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X2) %>%
+  arrange(X30)
+```
+
+Affirmative Action
+```{r}
+weighted_AA <-  wpct(survey$X31, survey$weightvec, na.rm=TRUE)
+unweighted_AA <-  wpct(survey$X31, na.rm=TRUE)
+
+write.csv(weighted_AA, "Graph 27-1.csv", row.names = TRUE)
+
+```
+
+```{r}
+AA_by_race <- survey %>% 
+  group_by(X2, X31) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X31) %>%
+  arrange(X2)
+
+write.csv(AA_by_race, "Graph 28.csv", row.names = TRUE)
+
+```
+
+Abortion
+```{r}
+weighted_abortion <-  wpct(survey$X32, survey$weightvec, na.rm=TRUE)
+unweighted_abortion <-  wpct(survey$X31, na.rm=TRUE)
+
+write.csv(weighted_abortion, "Graph 27-2.csv", row.names = TRUE)
+
+```
+
+```{r}
+abortion_by_gender <- survey %>% 
+  group_by(X4, X32) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X32) %>%
+  arrange(X4)
+
+write.csv(abortion_by_gender, "Graph 29.csv", row.names = TRUE)
+
+```
+
+Trans Healthcare
+```{r}
+weighted_tcare <-  wpct(survey$X33, survey$weightvec, na.rm=TRUE)
+unweighted_tcare <-  wpct(survey$X31, na.rm=TRUE)
+
+write.csv(weighted_tcare, "Graph 27-8.csv", row.names = TRUE)
+
+```
+
+Guns
+```{r}
+weighted_guns <-  wpct(survey$X34, survey$weightvec, na.rm=TRUE)
+unweighted_guns <-  wpct(survey$X32, na.rm=TRUE)
+
+write.csv(weighted_guns, "Graph 27-5.csv", row.names = TRUE)
+
+```
+
+```{r}
+guns_by_gender <- survey %>% 
+  group_by(X4, X34) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X34) %>%
+  arrange(X4)
+
+write.csv(guns_by_gender, "Graph 30.csv", row.names = TRUE)
+
+```
+
+##########################
+Other code
+survey <- survey %>%
+  mutate(school_by_first_gen = case_when(
+    X6 == "Charter" & X5 == "Yes" ~ "Charter First Gen",
+    X6 == "Dual enrollment" & X5 == "Yes" ~ "Home School/Other First Gen",
+    X6 == "Home School" & X5 == "Yes" ~ "Home School/Other First Gen",
+    X6 == "Private" & X5 == "Yes" ~ "Private First Gen",
+    X6 == "Public" & X5 == "Yes" ~ "Public First Gen",
+    X6 == "Charter" & X5 == "No" ~ "Charter Not First Gen",
+    X6 == "Dual enrollment" & X5 == "No" ~ "Home School/Other Not First Gen",
+    X6 == "Home School" & X5 == "No" ~ "Home School/Other Not First Gen",
+    X6 == "Private" & X5 == "No" ~ "Private Not First Gen",
+    X6 == "Public" & X5 == "No" ~ "Public Not First Gen",
+  
+First Gen VS type of school  
+#unweighted example
+
+survey %>%
+  group_by(X5, X6) %>%
+  summarise(count = n()) %>%
+  mutate(prop = count / sum(count)) %>%
+  group_by(X5) %>%
+  arrange(X5, X6)
+
+domestic_survey %>%
+  group_by(X5, X6) %>%
+  summarise(count = n()) %>%
+  mutate(prop = count / sum(count)) %>%
+  group_by(X5) %>%
+  arrange(X5, X6)
+
+survey %>% #first gen vs type of school seems inaccurate
+  group_by(X5, X6) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X5) %>%
+  arrange(X5, X6)
+
+domestic_survey %>%
+  group_by(X5, X6) %>%
+  summarise(count = sum(weightvec)) %>%
+  mutate(
+    prop = count / sum(count)) %>%
+  group_by(X5) %>%
+  arrange(X5, X6)
+
+weighted_geography <- survey %>%
+  select(X1,X4) %>%
+  group_by(X1,X4) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  mutate(total = sum(count)) %>%
+  mutate(proportion = count / total) %>%
+  mutate(weighted_prop = case_when(
+    X4 == "Male" ~ proportion * weight_male,
+    X4 == "Female" ~ proportion * weight_female,
+    TRUE ~ proportion
+  ))
+
+
+geography_all <- weighted_geography %>%
+  group_by(X1) %>%
+  summarize(weighted_prop_sum = sum(weighted_prop)) 
+
+
+geography_unweighted <- weighted_geography %>%
+  group_by(X1) %>%
+  summarize(prop_sum = sum(proportion)) 
+
+
+#just calculate gender weight
+female <- 0.489852701
+male <- 0.471849427
+nonbinary <- 0.0382978723
+sample_total <- 235
+sample_female <- 148
+sample_male <- 78
+sample_nonbinary <- 9
+
+
+design_female <- sample_total*female
+design_male <- sample_total*male
+design_nonbinary <- sample_total*nonbinary
+
+weight_female <- design_female/sample_female
+weight_male <- design_male/sample_male
+
+
+states = c("Alabama", "Alaska", "American Samoa", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia", "Guam", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Minor Outlying Islands", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Northern Mariana Islands", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Puerto Rico", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "U.S. Territories", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming")
+
+geography1 <- geography_all %>%
+  mutate(domestic = ifelse(X1 %in% states, "Domestic", "International")) %>%
+  group_by(domestic) %>%
+  summarize(total_weighted_prop_sum = sum(weighted_prop_sum))
+
+geography1_unweighted <- geography_unweighted %>%
+  mutate(domestic = ifelse(X1 %in% states, "Domestic", "International")) %>%
+  group_by(domestic) %>%
+  summarize(total_prop_sum = sum(prop_sum))
+
+
+weighted_geography2 <- survey %>%
+  select(X1,X4) %>%
+  mutate(domestic = ifelse(X1 %in% states, "Domestic", "International")) %>%
+  filter(domestic == "Domestic") %>%
+  group_by(X1,X4) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  mutate(total = sum(count)) %>%
+  mutate(proportion = count / total) %>%
+  mutate(weighted_prop = case_when(
+    X4 == "Male" ~ proportion * weight_male,
+    X4 == "Female" ~ proportion * weight_female,
+    TRUE ~ proportion
+  )) %>%
+  group_by(X1) %>%
+  summarize(weighted_prop_sum = sum(weighted_prop)) %>%
+  arrange(-weighted_prop_sum)
+
+
+unweighted_geography2 <- survey %>%
+  select(X1,X4) %>%
+  mutate(domestic = ifelse(X1 %in% states, "Domestic", "International")) %>%
+  filter(domestic == "Domestic") %>%
+  group_by(X1,X4) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  mutate(total = sum(count)) %>%
+  mutate(proportion = count / total) %>%
+  group_by(X1) %>%
+  summarize(proportion_sum = sum(proportion)) %>%
+  arrange(-proportion_sum)
+
+
+write.csv(weighted_geography2, "Graph 2.csv", row.names = TRUE)
+#difference in weighted vs unweighted values
+
