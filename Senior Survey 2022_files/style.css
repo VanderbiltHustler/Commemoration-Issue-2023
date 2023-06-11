@@ -1,0 +1,445 @@
+* {
+  margin: 0; padding: 0;
+  font-family: sofia-pro, sans-serif;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #efefef;
+}
+
+.logo a {
+  color: black;
+  text-decoration: none;
+  font-size: 30px;
+}
+
+.big-width .white-nav{
+  width: 50vw;
+  position: relative;
+  top: 0px;
+  display: inline;
+}
+
+.mobileTitle .page-nav {
+  margin-top: -60px;
+  margin-bottom: 50px;
+  width: 95vw;
+  margin-left: -5%;
+  text-align: center;
+}
+
+.mobileTitle .page-nav a{
+  font-size: 3vw;
+  color: black;
+}
+
+.mobileTitle .page-nav a:hover{
+  text-decoration: none;
+  color: #6c259c;
+  text-shadow: none;
+}
+
+.page-nav a{
+  text-decoration: none;
+  width: auto;
+  margin: 10px;
+  margin-right: 0px;
+  padding-right: 0px;
+  margin-left: none;
+  color: white;
+  display: inline-block;
+  white-space: no-wrap;
+}
+
+.page-nav{
+  margin-top: 20px;
+  width: 80%;
+  text-align: left;
+  overflow-y:inherit;
+  margin-left: -10px;
+  padding-left: 0;
+}
+
+.page-nav .white-nav{
+  color: white;
+  margin-top: -20px;
+}
+
+.page-nav a:hover,
+.page-nav a:focus {
+  text-shadow: -1.5px 1.5px 0px #FC8328;
+}
+.page-nav .white-nav a:hover,
+.page-nav .white-nav a:focus {
+  text-shadow: -1.5px 1.5px 0px #6c249c;
+}
+/*
+.page-nav a:hover,
+.page-nav a:focus {
+  text-decoration: none;
+  color: #6c259c;
+} */
+
+.nav-div{
+  position: relative;
+  top: -65px;
+  height: 0px;
+}
+
+.backToTop{
+  background-color: #6c249c;
+  padding: 8px;
+  position: sticky;
+  bottom: 20px;
+  float: right;
+  margin-right: 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 1.25vw;
+}
+
+.backToTop:hover{
+  background-color: black;
+  transition: ease 0.3s;
+}
+
+.tabbable-group {
+  margin: auto;
+  width: 50vw;
+  background-color: rgb(255, 255, 255, 0.5);
+  margin-bottom: 2rem;
+  padding: 20px 30px;
+  border-radius: 20px;
+}
+
+
+.list-group-container {
+  background-color: white;
+  cursor: pointer;
+  display: inline-block;
+  padding: 0.25rem 0.75rem 0.25rem 0.75rem;
+  border-radius: 1.5rem;
+  margin-right: 0.25rem;
+  margin-bottom: 0.25rem
+}
+
+.pills {
+  margin-bottom: 1rem;
+}
+
+.pills a {
+  text-decoration: none;
+  color: black;
+}
+.container {
+  margin: 0 auto;
+  /* background-color: blue; */
+
+  /* important part */
+  display: grid;
+  /* place-items: center; */
+  grid-template-areas:
+                  "inner-div";
+}
+
+.inner {
+  width: auto;
+
+
+  grid-area: inner-div;
+  /* border-style: solid; */
+}
+
+/* sets different rules for narrower screens (usually meaning mobile) If
+you want to quickly test how this works on your computer, just make your
+browser window really skinny */
+
+
+.coverImage {
+	display: flex;
+
+  justify-content: center;
+	flex-direction: column;
+
+  height: 100vh;
+  /* background-image: url(https://assets.dailyprincetonian.com/projects.dailyprincetonian.com/frosh-survey-25/nassau-cupola.png); */
+  background-image: url(https://assets.dailyprincetonian.com/projects.dailyprincetonian.com/senior-survey-2022/blair.png);
+  background-repeat: no-repeat;
+  background-position: center;
+
+
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+
+}
+
+#methodology-text{
+
+  padding-top: 3%;
+
+}
+
+/* .image {
+	width: 100%;
+} */
+
+.titleText {
+
+	/* padding-bottom: 15%;
+	margin-left: 5%;  */
+  /* margin-top: auto; */
+}
+
+.whiteHeaderText {
+
+  /* padding-bottom: 15%;
+	margin-right: 9%;  */
+  /* margin-top: auto;
+  margin-left: auto;  */
+
+}
+
+.whiteHeaderText  .title{
+
+	font-size: 6vw;
+	color: white !important;
+
+}
+
+.whiteHeaderText .subtitle{
+
+	color: white !important;
+
+}
+
+.rightHeaderText{
+  text-align: right;
+}
+
+.title {
+
+  font-family: sofia-pro, sans-serif;
+	font-size: 7vw;
+  /* color: #6c249c; */
+	/* color: rgb(145, 189, 224); */
+}
+
+.subtitle {
+
+  font-family: sofia-pro-soft, sans-serif;
+	font-size: 2vw;
+	font-weight: 350;
+	/* color: rgb(51, 67, 119);  */
+
+}
+
+.ad{
+  text-align: center;
+  padding-bottom: 7%;
+
+}
+
+.adImage{
+  width: 70vw;
+}
+
+.caption {
+	/* margin-left: 90%;
+	margin-top: 1%;
+	margin-bottom: 1%;  */
+
+  align-self: flex-end;
+  margin-top: auto;
+  padding-right: 2%;
+  padding-bottom: 5%;
+	font-size: 12px;
+}
+
+.intro {
+	font-size: 20px;
+	margin-left: 25%;
+	margin-right: 25%;
+	text-align: center;
+}
+
+.header {
+	font-size: 3vw;
+	text-align: center;
+	margin-bottom: 1%;
+  margin-top: 5%;
+}
+
+.two-col-box {
+	display: flex;
+	/* margin-left: 25%;
+	margin-right: 25%;
+	margin-top: 5%;
+	margin-bottom: 5%;  */
+  margin: auto;
+	width: 50%;
+	padding: 20px 20px;
+  border-radius: 20px;
+	background-color: rgb(255, 255, 255, 0.5);
+	font-size: 20px;
+  flex-direction: column;
+}
+
+h1 {
+  font-size: 42px;
+}
+
+.two-col-box .graph{
+
+border: none;
+height: 400px;
+width: 100%;
+
+}
+
+
+.chart {
+	display: inline-block;
+	width: 30vw;
+  margin-left: 1.5vw;
+  margin-right: 1.5vw;
+  padding: 0.5vw 1vw;
+  margin-bottom: 3vh;
+
+}
+
+.commentary {
+	font-size: 18px;
+	margin-top: 2%;
+  margin-bottom: 5%;
+	/* margin-left: 3%; */
+}
+
+.commentary a{
+  color: #6c249c;
+  text-decoration: none;
+}
+
+.intro-text a{
+
+  color: #6c249c;
+  text-decoration: none;
+
+}
+
+.intro-text a:hover {
+  text-decoration: underline;
+}
+
+.commentary a:hover {
+  text-decoration: underline;
+}
+
+.intro-text {
+	margin-left: 25%;
+	margin-right: 25%;
+	font-size: 20px;
+	margin-top: 2%;
+	margin-bottom: 3%;
+
+}
+
+.subcategory {
+	font-size: 35px;
+	margin-bottom: 3%;
+}
+
+.box-container {
+	display: flex;
+	width: 100%;
+	justify-content: space-around;
+	flex-wrap: wrap;
+}
+
+.box {
+	margin-bottom: 5%;
+	padding: 10px 10px;
+	background-color: rgb(243, 241, 241);
+	font-size: 20px;
+	border-style: solid;
+	border-width: 5px;
+	border-color: rgb(145, 189, 224);
+}
+
+.credits {
+  padding-bottom: 5%;
+  text-align: center;
+}
+
+.credits p strong {
+  display: inline-block;
+  padding-top: 5%;
+}
+
+#placeholder {
+	height: 400px;
+}
+
+.mobileTitle{
+  display: none;
+}
+
+@media screen and (max-width: 800px) {
+
+  .mobileTitle{
+    display: inline-block !important;
+  }
+
+  .mobileTitle .title{
+    font-size: 50px !important;
+  }
+
+  .mobileTitle .subtitle{
+    font-size: 30px !important;
+    padding-bottom: 15%;
+  }
+
+
+  .mobileTitle
+
+    .logo{
+        font-size: 20px;
+
+    }
+
+    .coverImage{
+      height: 50vh;
+    }
+
+    .tabbable-group{
+      width: 90vw;
+    }
+
+    .two-col-box{
+      width: 90vw;
+    }
+
+    .intro-text{
+      margin-left: 5%;
+      margin-right: 5%;
+    }
+
+    .titleText{
+      display: none;
+    }
+
+
+  }
+
+/* sets different rules for narrower screens (usually meaning mobile) If
+you want to quickly test how this works on your computer, just make your
+browser window really skinny */
+@media screen and (max-width: 800px) {
+  .logo {
+    font-size: 20px;
+  }
+}
+
+
